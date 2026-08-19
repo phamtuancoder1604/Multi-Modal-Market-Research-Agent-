@@ -1,30 +1,5 @@
 
 
-## Directory Structure
-
-advanced_research_agent/
-│
-├── src/
-│   ├── app.py                   # Streamlit Dashboard UI
-│   ├── retrieval.py             # Hybrid RAG Pipeline (ChromaDB + BM25 + Reranker)
-│   ├── graphs/
-│   │   └── workflow.py          # LangGraph Multi-Agent StateGraph Architecture
-│   └── tools/
-│       ├── web_tools.py         # Web Search & Playwright Scraper
-│       └── financial_tools.py   # yfinance Stock & Financial Metric Extractors
-│
-├── evaluation/
-│   ├── golden_dataset.json      # 30 Comprehensive Test Cases Across 4 Categories
-│   ├── benchmark_pipeline.py    # Automated LLM-as-a-Judge Evaluation Script
-│   └── benchmark_report.json    # Quantitative Evaluation Output Results
-│
-├── data/                        # Persistent Vector Indices & Raw Storage
-├── requirements.txt             # Python Package Dependencies
-└── README.md                    # Project Documentation
-
-
----
-
 ## Getting Started
 
 ### Prerequisites
