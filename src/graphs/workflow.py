@@ -31,33 +31,6 @@ from langgraph.checkpoint.memory import MemorySaver
 #  AGENT NODES IMPLEMENTATION
 
 
-# def planner_node(state: ResearchAgentState) -> dict:
-#     """
-#     Analyzes the user request and breaks it down into a strategic sequence
-#     of 2-3 specific search queries or ticker exploration tasks.
-#     """
-#     print("\n--- [ PLANNER AGENT] Generating Research Strategy ---")
-#     prompt = (
-#         f"You are an expert Research Planner. Break down this research query into 2-3 specific, "
-#         f"focused search queries or corporate ticker analysis tasks for early 2026 data.\n"
-#         f"User Query: {state['user_query']}\n"
-#         f"Respond ONLY with a valid JSON list of strings. Example: [\"query 1\", \"query 2\"]"
-#     )
-    
-#     response = llm.complete(prompt).text.strip()
-#     try:
-#         # Clean potential markdown wrapping if present in LLM response
-#         if response.startswith("```json"):
-#             response = response.split("```json")[1].split("```")[0].strip()
-#         elif response.startswith("```"):
-#             response = response.split("```")[1].split("```")[0].strip()
-            
-#         plan = json.loads(response)
-#     except Exception:
-#         # Fallback if JSON generation slips
-#         plan = [f"{state['user_query']} market trends 2026", f"{state['user_query']} financial overview"]
-        
-#     return {"research_plan": plan, "executed_queries": [], "next_step": "multimodal"}
 def planner_node(state: ResearchAgentState) -> dict:
     print("\n--- [PLANNER AGENT] Analyzing Query and Routing Tools ---")
     
@@ -116,54 +89,6 @@ def multimodal_node(state: ResearchAgentState) -> dict:
     # Proceed to researcher node after vision extraction
     return {"vision_data": extracted_analyses, "next_step": "researcher"}
 
-# def researcher_node(state: ResearchAgentState) -> dict:
-#     """
-#     Iterates over the plan, executes tools dynamically, processes data pipelines, 
-#     and refines highly relevant context blocks through ChromaDB.
-#     """
-#     print("\n--- [ RESEARCHER AGENT] Executing Tools & Populating RAG ---")
-#     plan = state.get("research_plan", [])
-#     raw_texts = []
-    
-#     # Simple check to extract implicit tickers (e.g., "NVDA", "VFS")
-#     query_upper = state["user_query"].upper()
-#     ticker = "GENERIC"
-#     for word in query_upper.split():
-#         if len(word) <= 5 and word.isalpha() and word not in ["THE", "FOR", "AND", "WITH", "ASIA"]:
-#             ticker = word
-#             break
-
-#     # 1. Execute Web Search for each query in the plan
-#     for query in plan:
-#         print(f"Executing web tool sequence for: {query}")
-#         urls = web_search_tool(query)
-#         # Mocking content fetching for demonstration - in production, fetch raw HTML here
-#         for url in urls[:2]:
-#             raw_texts.append(f"Source Data from {url}: Market context and industry tailwinds for early 2026.")
-            
-#     # 2. Execute Corporate Financial Tool
-#     fin_data = ""
-#     if ticker != "GENERIC":
-#         fin_data = finance_metrics_tool(ticker)
-#     else:
-#         fin_data = json.dumps({"info": "No explicit ticker detected, skipping direct financial pull."})
-
-#     # 3. Ingest collected raw artifacts into dual-index ChromaDB structures
-#     for text in raw_texts:
-#         ingest_unstructured_data(text, "https://automated-agent-scraper.vn")
-        
-#     if ticker != "GENERIC" and "error" not in fin_data:
-#         ingest_structured_data(fin_data, ticker_symbol=ticker, topic_scope="financials")
-
-#     # 4. Pull optimized contexts back out using the Parallel Reranking Pipeline
-#     refined = retrieve_and_rerank(state["user_query"])
-    
-#     return {
-#         "raw_web_data": raw_texts, 
-#         "financial_data": [fin_data], 
-#         "refined_contexts": refined,
-#         "next_step": "writer"
-#     }
 
 async def async_research_pipeline(plan: list, ticker: str) -> tuple:
     """
@@ -227,57 +152,6 @@ def researcher_node(state: ResearchAgentState) -> dict:
         "next_step": "writer"
     }
 
-# def writer_node(state: ResearchAgentState) -> dict:
-#     """
-#     Synthesizes refined structural and textual contexts into a comprehensive Markdown report.
-#     """
-#     print("\n--- [ WRITER AGENT] Compiling Professional Report ---")
-#     contexts_str = "\n\n".join(state.get("refined_contexts", ["No context retrieved."]))
-#     vision_str = "\n\n".join(state.get("vision_data", []))
-#     feedback = state.get("editor_feedback", {}).get("remarks", "None")
-    
-#     prompt = (
-#         f"You are a Senior Financial Writer. Synthesize the provided context and any editor feedback "
-#         f"into a pristine, professional Markdown report. Ensure all metrics align cleanly.\n"
-#         f"User Original Intent: {state['user_query']}\n"
-#         f"Retrieved Verified Context:\n{contexts_str}\n"
-#         f"Extracted Image/Diagram Data:\n{vision_str}\n"
-#         f"Editor Feedback to incorporate: {feedback}\n"
-#         f"Output ONLY the finalized Markdown report content."
-#     )
-    
-#     report = llm.complete(prompt).text.strip()
-#     return {"current_report": report, "next_step": "editor"}
-
-
-# def editor_node(state: ResearchAgentState) -> dict:
-#     """
-#     Acts as a quality guardrail to validate data alignment or authorize publication.
-#     """
-#     print("\n--- [ EDITOR AGENT] Evaluating Output Integrity ---")
-#     report = state.get("current_report", "")
-    
-#     prompt = (
-#         f"You are the Editor-in-Chief. Critically review this draft report. "
-#         f"Check if it directly addresses the query and looks complete.\n"
-#         f"Draft Report:\n{report}\n"
-#         f"Respond ONLY in this explicit JSON format:\n"
-#         f"{{\"decision\": \"approve\" or \"revise\", \"remarks\": \"detailed reason for decision\"}}"
-#     )
-    
-#     response = llm.complete(prompt).text.strip()
-#     try:
-#         if response.startswith("```json"):
-#             response = response.split("```json")[1].split("```")[0].strip()
-#         elif response.startswith("```"):
-#             response = response.split("```")[1].split("```")[0].strip()
-            
-#         review = json.loads(response)
-#     except Exception:
-#         review = {"decision": "approve", "remarks": "Fallback approval due to parser parsing."}
-        
-#     decision = review.get("decision", "approve")
-#     return {"editor_feedback": review, "next_step": "end" if decision == "approve" else "writer"}
 def writer_node(state: ResearchAgentState) -> dict:
     """
     Synthesizes retrieved context into a Markdown report enforcing strict citation masking.
@@ -337,20 +211,6 @@ def editor_node(state: ResearchAgentState) -> dict:
 #  CONDITIONAL ROUTING LOGIC
 
 
-# def route_next_step(state: ResearchAgentState) -> Literal["researcher", "writer", "editor", "__end__"]:
-#     """
-#     Inspects state flags to determine the next graph node execution target.
-#     """
-#     status = state.get("next_step")
-#     if status == "multimodal":
-#         return "multimodal"
-#     elif status == "researcher":
-#         return "researcher"
-#     elif status == "writer":
-#         return "writer"
-#     elif status == "editor":
-#         return "editor"
-#     return "end"
 def route_next_step(state: ResearchAgentState) -> str:
     """
     Inspects state flags to determine the next graph node execution target.
@@ -437,18 +297,4 @@ if __name__ == "__main__":
     
     print("Launching Multi-Agent Research System...")
     final_output = research_agent_graph.invoke(initial_inputs, config=config)
-    ## delete after test
-    print("\n--- BÁO CÁO LƯỢT 1 ---")
-    print(final_output.get("current_report")[:300] + "...\n[Đoạn sau đã ẩn bớt]")
     
-    print("\n [Lượt 2] Người dùng yêu cầu chỉnh sửa dựa trên hội thoại cũ...")
-    
-    # Gửi câu hỏi mới mà không cần truyền lại các trường data trống, chỉ cần đúng thread_id
-    follow_up_inputs = {
-        "user_query": "Add a short warning about the risk of charging station overload to the report above.",
-        "next_step": ""  # Reset cờ để quay lại Planner điều phối
-    }
-    follow_up_output = research_agent_graph.invoke(follow_up_inputs, config=config)
-    
-    print(" FINAL APPROVED RESEARCH REPORT GENERATED:")
-    print(follow_up_output.get("current_report"))
